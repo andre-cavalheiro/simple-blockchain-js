@@ -1,41 +1,67 @@
-const mongo = require('../db/mongo')
 const {calculateHash} = require('./hashServices')
-const {collection} = require('../config/db')
 const firstBlock = require('../config/firstBlock')
-const {insertInDB, getLastElement} = require('../db/mongo')
+const {url, dbName, collection} = require('../config/db')
+const mongoose = require('mongoose');
 
-const initChain = function () {
-    insertInDB(firstBlock)
-}
+const initChain = function (mode) {
+    mongoose.connect(url + '/' + dbName);
 
-const createBlock = function (db, index,lastHash,timestamp, payload){
-    const hash = calculateHash(index, lastHash, timestamp, payload)
-    return {
-        index: index+1,
-        hash,
-        previousHash: lastHash,
-        timestamp,
-        payload
+    const Schema = mongoose.Schema,
+        ObjectId = Schema.ObjectId;
+
+    const blockSchema = new Schema({
+        id: ObjectId,
+        index: {type: Number},
+        hash: String,
+        previousHash: String,
+        payload: Object
+    });
+
+    /*block.pre('save',function (next) {
+        verifyBlock(this)
+    })*/
+
+    mongoose.model('block', blockSchema);
+
+    if(mode === 0){
+        const firstBlock_ = createBlock(firstBlock.index,firstBlock.previousHash,firstBlock.payload)
+        firstBlock_.save(function (err) {
+            if(err){
+                console.log("Err saving first block " + err)
+            }
+        })
+    }else{
+        //GET dava from other nodes
     }
 }
 
 
-const addBlockToChain = async function (payload,db){
-    const lastBlock = await getLastElement(db)
-    const timestamp = new Date().getTime() / 1000;
-    const block = createBlock(db, lastBlock.index,lastBlock.hash,timestamp,payload)
-    if(!verifyBlock(block, db)){
-        throw new Error('Invalid block');
-        return
-    }
-
-    db.collection(collection).insertOne(block)
-    return false
+const addBlockToChain = async function (payload){
+    const blocks = mongoose.model('block')
+    blocks.find().sort({index: -1}).limit(1).find(function(err, res) {
+        if(err){
+            console.log("Err finding block " + err)
+        }
+        const lastBlock = res[0]._doc
+        const newBlock = createBlock(lastBlock.index+1,lastBlock.hash,payload)
+        newBlock.save(function (err) {
+            if(err){
+                console.log("Err block " + err)
+            }
+        })
+    });
 }
 
-const verifyBlock = function () {
-    //FIXME
-    return true
+
+const createBlock = function (index,lastHash, payload){
+    const block = mongoose.model('block')
+    const instance = new block()
+    instance.index = index
+    instance.hash = calculateHash(index, lastHash, payload)
+    instance.previousHash = lastHash
+    instance.payload = payload
+
+    return instance
 }
 
 
@@ -43,5 +69,4 @@ module.exports ={
     initChain,
     createBlock,
     addBlockToChain,
-    verifyBlock
 }

@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require("body-parser");
+const mongoose = require('mongoose');
 const expressMongoDb = require('express-mongo-db');
 const indexRouter = require('./routes/index');
 const getPeers = require('./routes/getPeers');
@@ -21,7 +22,8 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(bodyParser.json());
-app.use(expressMongoDb(url + '/' + dbName));
+//app.use(expressMongoDb(url + '/' + dbName));
+mongoose.connect(url + '/' + dbName);
 
 // Ready API
 app.use('/', indexRouter);
@@ -30,11 +32,8 @@ app.use('/peers', addPeer);
 app.use('/add-block',addBlock );
 
 // Get initial parameters
-if(initialPeers.length === 0){
-    initChain()
-}else{
-  //FIXME get chain and peers from parent node
-}
+initChain(initialPeers.length)
+
 //Allow connections from new peers
 initP2PServer(p2p_port);
 

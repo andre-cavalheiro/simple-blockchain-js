@@ -1,19 +1,29 @@
-const MongoClient = require('mongodb').MongoClient;
+const mongoose = require('mongoose');
 
 // Database configuration parameters
 const {url, dbName, collection} = require('../config/db')
 
+const initDB = function () {
+    mongoose.connect(url + '/' + dbName);
+
+    const blockSchema = new Schema({
+        id: ObjectId,
+        hash: String,
+        previousHash: String,
+        payload: Object
+    });
+
+    /*block.pre('save',function (next) {
+        verifyBlock(this)
+    })*/
+
+    const block = mongoose.model('block', blockSchema);
+
+}
+
 const insertInDB = function (payload) {
     // Use connect method to connect to the server
-    MongoClient.connect(url, function(err, client) {
-        if(!err){
-            console.log("Connected successfully to server");
-        }
-
-        const db = client.db(dbName);
-        db.collection(collection).insert({...payload})
-    });
-    return true
+    const newBlock = mongoose.model('block');
 }
 
 const getLastElement = async function (db) {

@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post('/', async function(req, res, next) {
     try{
-        await addBlockToChain(req.body.payload,req.db)
+        await addBlockToChain(req.body.payload)
         sendChain()
         res.send(true)
     }catch(e){
