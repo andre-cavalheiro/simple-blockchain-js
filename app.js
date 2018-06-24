@@ -1,10 +1,13 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const indexRouter = require('./controllers/index');
-const getPeers = require('./controllers/getPeers');
-const addPeer = require('./controllers/addPeer');
-const blocks = require('./controllers/blocks');
-const graph = require('./services/graphServices')
+const bodyParser = require("body-parser");
+const expressMongoDb = require('express-mongo-db');
+const indexRouter = require('./routes/index');
+const getPeers = require('./routes/getPeers');
+const addPeer = require('./routes/addPeer');
+const addBlock = require('./routes/addBlock');
+const {url, dbName} = require('./config/db')
+const {initP2PServer} = require('./services/graphServices')
+const {initChain} = require('./services/blockServices')
 
 // Get environment defined variables
 const http_port = process.env.HTTP_PORT || 3000;
@@ -13,24 +16,34 @@ const initialPeers = process.env.PEERS ? process.env.PEERS.split(',') : [];
 
 const app = express();
 
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+
 app.use(bodyParser.json());
+app.use(expressMongoDb(url + '/' + dbName));
 
 // Ready API
 app.use('/', indexRouter);
 app.use('/peers', getPeers);
 app.use('/peers', addPeer);
-app.use('/blocks',blocks );
+app.use('/add-block',addBlock );
 
-// Launch Peer Server
-// await initP2PServer();
-graph.initP2PServer();
+// Get initial parameters
+if(initialPeers.length === 0){
+    initChain()
+}else{
+  //FIXME get chain and peers from parent node
+}
+//Allow connections from new peers
+initP2PServer(p2p_port);
 
-// catch 404 and forward to error handler
+// Catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
 });
 
-// error handler
+// Error handler
 app.use(function(err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
@@ -40,7 +53,7 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
 });
 
-//Launch API server
+// Launch API server
 app.listen(http_port, () => console.log('Conquering the world on port: ' + http_port));
 
 module.exports = app;
