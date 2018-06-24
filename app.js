@@ -1,7 +1,6 @@
 const express = require('express');
 const bodyParser = require("body-parser");
 const mongoose = require('mongoose');
-const expressMongoDb = require('express-mongo-db');
 const indexRouter = require('./routes/index');
 const getPeers = require('./routes/getPeers');
 const addPeer = require('./routes/addPeer');
@@ -22,7 +21,6 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(bodyParser.json());
-//app.use(expressMongoDb(url + '/' + dbName));
 mongoose.connect(url + '/' + dbName);
 
 // Ready API
