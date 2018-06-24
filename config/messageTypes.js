@@ -1,3 +1,4 @@
 module.exports = {
-    'newBlock': 'ADD_NEW_BLOCK'
+    'newBlock': 'ADD_NEW_BLOCK',
+    'requestChain': 'REQUEST_CHAIN'
 }

@@ -1,9 +1,10 @@
+const mongoose = require('mongoose');
 const {calculateHash} = require('./hashServices')
 const firstBlock = require('../config/firstBlock')
 const {url, dbName, collection} = require('../config/db')
-const mongoose = require('mongoose');
+const {connectToPears} = require('./graphServices')
 
-const initChain = function (mode) {
+const initChain = function (mode, initialPeers) {
     mongoose.connect(url + '/' + dbName);
 
     const Schema = mongoose.Schema,
@@ -31,12 +32,13 @@ const initChain = function (mode) {
             }
         })
     }else{
-        //GET dava from other nodes
+        //Get data from other nodes
+        connectToPears(initialPeers)
     }
 }
 
 
-const addBlockToChain = async function (payload){
+const addBlockToChain = function (payload){
     const blocks = mongoose.model('block')
     blocks.find().sort({index: -1}).limit(1).find(function(err, res) {
         if(err){

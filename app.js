@@ -30,7 +30,7 @@ app.use('/peers', addPeer);
 app.use('/add-block',addBlock );
 
 // Get initial parameters
-initChain(initialPeers.length)
+initChain(initialPeers.length, initialPeers)
 
 //Allow connections from new peers
 initP2PServer(p2p_port);

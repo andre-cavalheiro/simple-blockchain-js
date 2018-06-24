@@ -1,13 +1,13 @@
 const express = require('express');
 const {addBlockToChain, createBlock} = require('../services/blockServices')
-const {sendChain} = require('../services/graphServices')
+const {sendBlock} = require('../services/graphServices')
 
 const router = express.Router();
 
-router.post('/', async function(req, res, next) {
+router.post('/', function(req, res, next) {
     try{
-        await addBlockToChain(req.body.payload)
-        sendChain()
+        addBlockToChain(req.body.payload)
+        sendBlock()
         res.send(true)
     }catch(e){
         //FIXME Send code 500 header
