@@ -14,7 +14,6 @@ router.post('/', function(req, res, next) {
         console.log(e)
         res.send(false)
     }
-
 });
 
 module.exports = router;

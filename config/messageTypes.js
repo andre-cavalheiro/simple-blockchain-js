@@ -1,4 +1,5 @@
 module.exports = {
-    'newBlock': 'ADD_NEW_BLOCK',
-    'requestChain': 'REQUEST_CHAIN'
+    'sendBlock': 'ADD_NEW_BLOCK',
+    'requestChain': 'REQUEST_CHAIN',
+    'sendChain': 'SEND_CHAIN'
 }

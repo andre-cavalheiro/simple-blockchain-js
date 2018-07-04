@@ -23,6 +23,8 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 mongoose.connect(url + '/' + dbName);
 
+// Above: Import libraries and set default values
+
 // Ready API
 app.use('/', indexRouter);
 app.use('/peers', getPeers);
