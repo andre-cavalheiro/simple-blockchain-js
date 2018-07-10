@@ -1,0 +1,36 @@
+{
+	"info": {
+		"_postman_id": "352a25bf-037b-4af7-98ca-eba478b31e87",
+		"name": "blockchain",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "add block",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"payload\": \"This is what i want to  save in this block\"\n\t\n}"
+				},
+				"url": {
+					"raw": "localhost:3000/add-block",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"add-block"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

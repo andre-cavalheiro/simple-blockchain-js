@@ -177,6 +177,7 @@ const queryChain = function () {
     broadcast(messageTypes.requestChain,null);
 }
 
+//List Known Peers to single nodes who have requested them
 const listKnownPeers = function (peerIndex) {
     nodes[peerIndex].send({
         type: messageTypes.sendPeers,

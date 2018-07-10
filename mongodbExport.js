@@ -1,0 +1,1 @@
+db.getCollection('blocks').find({})
