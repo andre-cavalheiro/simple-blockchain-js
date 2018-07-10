@@ -4,93 +4,138 @@ const firstBlock = require('../config/firstBlock')
 const {url, dbName, collection} = require('../config/db')
 const {connectToPears,queryChain} = require('./graphServices')
 
+
 //Create block model and initiate chain by either creating first block or querying other nodes
 const initChain = function (mode, initialPeers) {
+    //Coonect to db
     mongoose.connect(url + '/' + dbName);
 
     const Schema = mongoose.Schema,
-        ObjectId = Schema.ObjectId;
+        ObjectId = Schema.ObjectId
 
     const blockSchema = new Schema({
-        id: ObjectId,
-        index: {type: Number},
+        _id: {type: ObjectId},
         hash: String,
         previousHash: String,
         payload: Object
-    });
+    }, {
+        versionKey: false
+    })
 
-    /*block.pre('save',function (next) {
-        verifyBlock(this)
-    })*/
+    blockSchema.pre('save', async function (next) {
+        const verify = await verifyBlock(this)
+        if(verify !== true)
+            next(verify)
+        else
+            next()
+
+    })
 
     mongoose.model('block', blockSchema);
-
     if(mode === 0){
-        const firstBlock_ = createBlock(firstBlock.index,firstBlock.payload,firstBlock.previousHash)
+        console.log('Creating genesis block')
+        // emptyChain()
+        const firstBlock_ = createBlock(firstBlock.payload,firstBlock.previousHash)
         firstBlock_.save(function (err) {
             if(err){
-                console.log("Err saving first block " + err)
+                throw new Error('Couldn\'t save genesis block ' + err)
+                //fixme exit
             }
         })
     }else{
+        console.log('Connecting to peers...')
         connectToPears(initialPeers)
+        console.log('Requesting chain...')
         queryChain()
     }
 }
 
 
-const addBlockToChain = function (payload){
-    const blocks = mongoose.model('block')
-    blocks.find().sort({index: -1}).limit(1).find(function(err, res) {
+const addBlockToChain = async function ({block, payload}){
+    const localBlocks = mongoose.model('block')
+    await localBlocks.find().sort({_id: -1}).limit(1).find(async function(err, res) {      //findOne?
         if(err){
-            console.log("Err finding block " + err)
+            throw new Error('Err looking into chain ' + err)
         }
         const lastBlock = res[0]._doc
-        const sendBlock = createBlock(lastBlock.index+1,payload ,lastBlock.hash)
-        sendBlock.save(function (err) {
+        const newBlock =  (block === undefined) ? createBlock(payload ,lastBlock.hash): block
+
+        await newBlock.save(function (err) {
             if(err){
-                console.log("Err block " + err)
+                throw new Error('Error saving block ' + err)
             }
         })
     });
 }
 
 
-const createBlock = function (index,payload, lastHash, hash){
+const createBlock = function (payload, lastHash, hash){
     const block = mongoose.model('block')
     const instance = new block()
-    instance.index = index
-    if(hash == undefined){
-        instance.hash = calculateHash(index, lastHash, payload)
-    } else {
+    instance._id = new mongoose.mongo.ObjectId();
+    if(!hash)
+        instance.hash = calculateHash(block._id, lastHash, payload)
+    else
         instance.hash = hash
-    }
     instance.previousHash = lastHash
     instance.payload = payload
 
     return instance
 }
 
+
 const updateChain = function (newChain) {
     if(!verifyChain(newChain)){
-        //FIXME
-        console.log('Received chain is invalid, aborting...')
+        //fixme
+        console.error('Received chain is invalid, aborting...')
         return
     }
     //update chain
 }
 
-const verifyChain = function (chain) {
-    /*Go through all blocks and verify if:
-        Previous Hash matches
-        Hash matches content1
-    */
+const verifyBlock = async function (newBlock) {
+    //fixme - check if the hash matches the content?
+    const block = mongoose.model('block')
+    try{
+        //fixme - must find a way to sort by hash/previousHash
+        await block.find().sort({_id: -1}).limit(1).find(function (err, res) {
+            if(err){
+                throw new Error("Err looking into chain " + err)
+            }
+            if(!(res.length == 0)){
+                const lastBlock = res[0]._doc
+                if(lastBlock.hash !== newBlock.previousHash){
+                    throw new Error('Invalid Block, hashes don\'t match')
+                }
+            }
+        })
+    } catch(err){
+        return err
+    }
+    return true
+
+}
+
+const verifyChain = function () {
     return true
 }
 
-const verifyBlock = function () {
 
+const emptyChain = function () {
+    const block = mongoose.model('block')
+    block.find({ }).remove( )
+    
 }
+
+const countBlocks = function () {
+    const block = mongoose.model('block')
+    let numBlocks = false
+    block.count({}, function(err, count) {
+        numBlocks = count
+    });
+    return numBlocks
+}
+
 
 module.exports ={
     initChain,

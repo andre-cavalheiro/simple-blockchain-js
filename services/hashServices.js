@@ -1,8 +1,8 @@
 const CryptoJS = require("crypto-js");
 
 
-const calculateHash = function(index, previousHash, data){
-    return CryptoJS.SHA256(index + previousHash + data).toString();
+const calculateHash = function(_id, previousHash, data){
+    return CryptoJS.SHA256(_id + previousHash + data).toString();
 }
 
 module.exports = {

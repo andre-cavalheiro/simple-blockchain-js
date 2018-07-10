@@ -21,21 +21,21 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(bodyParser.json());
-mongoose.connect(url + '/' + dbName);
+mongoose.connect(url + '/' + dbName)
 
 // Above: Import libraries and set default values
 
-// Ready API
-app.use('/', indexRouter);
-app.use('/peers', getPeers);
-app.use('/peers', addPeer);
-app.use('/add-block',addBlock );
-
-// Get initial parameters
+// Whether build blockchain from genesis block, or request the current state of the chane from peers.
 initChain(initialPeers.length, initialPeers)
 
 //Allow connections from new peers
 initP2PServer(p2p_port);
+
+// Ready HTTP API
+app.use('/', indexRouter);
+app.use('/peers', getPeers);
+app.use('/peers', addPeer);
+app.use('/add-block',addBlock );
 
 // Catch 404 and forward to error handler
 app.use(function(req, res, next) {

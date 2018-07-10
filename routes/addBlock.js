@@ -1,18 +1,18 @@
 const express = require('express');
 const {addBlockToChain, createBlock} = require('../services/blockServices')
-const {sendBlock} = require('../services/graphServices')
+const {spreadNewBlock} = require('../services/graphServices')
 
 const router = express.Router();
 
-router.post('/', function(req, res, next) {
+router.post('/', async function(req, res, next) {
     try{
-        addBlockToChain(req.body.payload)
-        sendBlock()
-        res.send(true)
-    }catch(e){
-        //FIXME Send code 500 header
-        console.log(e)
-        res.send(false)
+        await addBlockToChain({payload: req.body.payload})
+        spreadNewBlock()                        // fixme - Should receive index to make sure we're spreading the right one
+        res.status(201).send("Block was added with success")
+    }catch(err){
+        console.error(err)
+        res.send("Failed to add block - " + err)
+        // Defenir codigo consoante o erro
     }
 });
 

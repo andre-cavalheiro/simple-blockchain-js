@@ -1,14 +1,16 @@
 const WebSocket = require("ws")
 const mongoose = require('mongoose');
 const messageTypes = require('../config/messageTypes')
-const {updateChain,verifyBlock} = require('./blockServices')
+const {createBlock, updateChain,verifyBlock} = require('./blockServices')
 let nodes = []
 
 //wait for connections
 const initP2PServer = function (port) {
     const server = new WebSocket.Server({port});
-    server.on('connection', (ws) => handlePear(ws));
-    console.log('Waiting for new buddies on: ' + port);
+    server.on('connection', (ws) => {
+        handlePear(ws)
+    });
+    console.log('Waiting for new peers connections on: ' + port);
     return server
 }
 
@@ -27,18 +29,21 @@ const connectToPears = function (peers) {
 const handlePear = function (ws) {
     nodes.push(ws)
     //Define protocol
-    defineMessageHandlers(ws);
+    // listKnownPeers()
+    defineMessageHandlers(ws, nodes.length -1);
     defineErrorHandlers(ws);
+    console.log('-Connected to new peer')
 }
 
 //Protocol implementation
-const defineMessageHandlers = function(ws) {
+const defineMessageHandlers = function(ws, peerIndex) {
     ws.on('message', (data) => {
         const message = JSON.parse(data);
         console.log('Received message' + JSON.stringify(message));
         switch (message.type) {
             case messageTypes.sendBlock:
                 console.log(message.payload)
+                receiveRemoteBlock(message.payload, peerIndex)
                 break;
             case messageTypes.requestChain:
                 sendChain()
@@ -46,9 +51,25 @@ const defineMessageHandlers = function(ws) {
             case messageTypes.sendChain:
                 receiveChain(message.payload)
                 break;
+            case messageTypes.requestPeers:
+                listKnownPeers(peerIndex)
+                break
+            case messageTypes.sendPeers:
+                //handle receiving peers
+                break
         }
     });
 };
+
+//Receive new remote block and add it to the chain
+const receiveRemoteBlock = function (remoteBlock, peerIndex) {
+    if(!verifyBlock(remoteBlock)){
+        queryChain()
+        return
+    }
+    const newBlock = createBlock(remoteBlock.payload, remoteBlock.lastHash, remoteBlock.hash)
+    addBlockToChain({block: newBlock})
+}
 
 //Connection error handling
 const defineErrorHandlers = function(ws){
@@ -61,15 +82,24 @@ const defineErrorHandlers = function(ws){
 };
 
 
+// Spread the new received block to every other node that's not the one who send the new block
+const spreadNewBlock = function (payload) {
+    nodes.forEach(function (ws, key) {
+        sendBlock(ws,key,payload)
+    })
+}
+
+
+
 //Send block
-const sendBlock = function () {
+const sendBlock = function (ws, index, payload) {
     const blocks = mongoose.model('block')
-    blocks.find().sort({index: -1}).limit(1).find(function(err, res) {
+    blocks.find().sort({_id: -1}).limit(1).find(function(err, res) {
         if(err){
             console.log("Err finding block " + err)
         }
         const lastBlock = res[0]._doc
-        broadcast(messageTypes.sendBlock, lastBlock)
+        nodes[index].send(JSON.stringify({type: messageTypes.sendBlock, payload}))
     });
 }
 
@@ -86,25 +116,55 @@ const sendChain = function () {
 }
 
 //Receive chain and act accordingly
-const receiveChain = function (blocks) {
+const receiveChain = function (remoteBlocks) {
+    //fixme - this should receive as a parameter the number of elements in the chain with countBlock() and searching a constant number of elements for eventual cheching (maybe rework?)
     const searchDepth = 10
     const localBlocks = mongoose.model('block')
-    blocks.sort((a, b) => {return a.index - b.index});
-    const lastRemoteBlock = blocks[blocks.length - 1]
-    localBlocks.find().sort({index: -1}).limit(searchDepth).find(function(err, res) {
+    if(localBlocks == undefined){
+        //fill empty library
+        for(let i = 0; i< remoteBlocks.length; i++){
+            //fixme - test-me
+            let nextChainBlock = remoteBlocks[remoteBlocks.length - i]
+            createBlock(nextChainBlock.payload, nextChainBlock.previousHash, nextChainBlock.hash)
+        }
+        return
+    }
+    remoteBlocks.sort((a, b) => {return a.index - b.index});
+    const lastRemoteBlock = remoteBlocks[remoteBlocks.length - 1]
+    localBlocks.find().sort({_id: -1}).limit(searchDepth).find(function(err, res) {
         if (err) {
+            //fixme
             console.log("Err finding block " + err)
         }
         const localBlocks = res[0]._doc  //fixme
         const lastLocalBlock = localBlocks[0]
-        console.log(lastLocalBlock)
         if(lastLocalBlock.index < lastRemoteBlock.index){
             console.log('Local blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index);
-            if(lastRemoteBlock.previousHash === lastLocalBlock.hash && verifyBlock()) {
+            if(lastRemoteBlock.previousHash === lastLocalBlock.hash) {
                 console.log('Appending single block to chain')
-                createBlock(index, payload, lastHash, hash)
-             }else{
-                    //fixme - complex stuff
+                addBlockToChain({block: lastRemoteBlock})
+                return
+            }else{
+                //search local chain to see if it matches up
+                //search for a few lost nodes
+                //fixme - test-me
+                let fixedChain = false
+                for(let i = 0; i< remoteBlocks.length; i++){
+                    if(remoteBlocks[remoteBlocks.length - i].previousHash == lastRemoteBlock.hash) {
+                        for (let j = remoteBlocks.length - i; j >= 0; j--){
+                            let nextChainBlock = remoteBlocks[remoteBlocks.length - j]
+                            addBlockToChain({block: nextChainBlock})
+                            if(j == 0){
+                                fixedChain = true
+                            }
+                        }
+                        break;
+                    }
+                }
+                //search for forks in the chain
+                if(!fixedChain){
+                    //fixme - algorithm to find where branch is broken and check which one is longer
+                }
             }
         }
     })
@@ -116,6 +176,13 @@ const queryChain = function () {
     broadcast(messageTypes.requestChain,null);
 }
 
+const listKnownPeers = function (peerIndex) {
+    nodes[peerIndex].send({
+        type: messageTypes.sendPeers,
+        payload: nodes
+    })
+}
+
 //Send payload to known pears
 const broadcast = function (type, payload) {
     nodes.forEach(function (peer) {
@@ -123,9 +190,10 @@ const broadcast = function (type, payload) {
     })
 }
 
+
 module.exports = {
     initP2PServer,
     connectToPears,
     queryChain,
-    sendBlock
+    spreadNewBlock
 }
