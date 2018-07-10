@@ -4,6 +4,9 @@ This is an experemental project to learn the basics of blockchain.
 
 
 # To run
+instal dependencies 
+
+npm install
 
 Start by running a mongodb database temporary db:
 
@@ -14,7 +17,9 @@ mongod --dbpath=/tmp/test
 Then start some nodes:
 
 ```bash
-mete os comandos aqui
+npm start
+npm first
+npm second
 ```
 
 
