@@ -26,7 +26,9 @@ mongoose.connect(url + '/' + dbName)
 // Above: Import libraries and set default values
 
 // Whether build blockchain from genesis block, or request the current state of the chane from peers.
-initChain(initialPeers.length, initialPeers)
+initChain(initialPeers.length, initialPeers).then(() => {
+    console.log('Chain initiaalized with sucess')
+})
 
 //Allow connections from new peers
 initP2PServer(p2p_port);

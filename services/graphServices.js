@@ -56,6 +56,7 @@ const defineMessageHandlers = function(ws, peerIndex) {
                 break
             case messageTypes.sendPeers:
                 //handle receiving peers
+
                 break
         }
     });
@@ -90,7 +91,6 @@ const spreadNewBlock = function (payload) {
 }
 
 
-
 //Send block
 const sendBlock = function (ws, index, payload) {
     const blocks = mongoose.model('block')
@@ -118,6 +118,7 @@ const sendChain = function () {
 //Receive chain and act accordingly
 const receiveChain = function (remoteBlocks) {
     //fixme - this should receive as a parameter the number of elements in the chain with countBlock() and searching a constant number of elements for eventual cheching (maybe rework?)
+    //FIX THIS FUNCTION
     const searchDepth = 10
     const localBlocks = mongoose.model('block')
     if(localBlocks == undefined){
@@ -139,7 +140,7 @@ const receiveChain = function (remoteBlocks) {
         const localBlocks = res[0]._doc  //fixme
         const lastLocalBlock = localBlocks[0]
         if(lastLocalBlock.index < lastRemoteBlock.index){
-            console.log('Local blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index);
+            console.log('Local blockchain possibly behind. We got: ' + latestBlockHeld.hash + ' Peer got: ' + latestBlockReceived.previousHash);
             if(lastRemoteBlock.previousHash === lastLocalBlock.hash) {
                 console.log('Appending single block to chain')
                 addBlockToChain({block: lastRemoteBlock})
@@ -195,5 +196,6 @@ module.exports = {
     initP2PServer,
     connectToPears,
     queryChain,
-    spreadNewBlock
+    spreadNewBlock,
+    broadcast
 }

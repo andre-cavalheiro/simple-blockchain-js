@@ -6,7 +6,7 @@ const {connectToPears,queryChain} = require('./graphServices')
 
 
 //Create block model and initiate chain by either creating first block or querying other nodes
-const initChain = function (mode, initialPeers) {
+const initChain = async function (mode, initialPeers) {
     //Coonect to db
     mongoose.connect(url + '/' + dbName);
 
@@ -33,6 +33,8 @@ const initChain = function (mode, initialPeers) {
 
     mongoose.model('block', blockSchema);
     if(mode === 0){
+        console.log('Emptying db...')
+        await emptyChain()
         console.log('Creating genesis block')
         // emptyChain()
         const firstBlock_ = createBlock(firstBlock.payload,firstBlock.previousHash)
@@ -65,6 +67,7 @@ const addBlockToChain = async function ({block, payload}){
                 throw new Error('Error saving block ' + err)
             }
         })
+        return newBlock
     });
 }
 
@@ -121,9 +124,9 @@ const verifyChain = function () {
 }
 
 
-const emptyChain = function () {
+const emptyChain = async function () {
     const block = mongoose.model('block')
-    block.find({ }).remove( )
+    await block.remove({})
     
 }
 
