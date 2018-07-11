@@ -1,5 +1,5 @@
 const express = require('express');
-const {addBlockToChain, createBlock} = require('../services/blockServices')
+const {addBlockToChain, createBlock} = require('../services/chainServices')
 const {spreadNewBlock, broadcast} = require('../services/graphServices')
 
 const router = express.Router();

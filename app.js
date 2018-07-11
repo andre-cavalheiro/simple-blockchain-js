@@ -6,8 +6,8 @@ const getPeers = require('./routes/getPeers');
 const addPeer = require('./routes/addPeer');
 const addBlock = require('./routes/addBlock');
 const {url, dbName} = require('./config/db')
-const {initP2PServer} = require('./services/graphServices')
-const {initChain} = require('./services/blockServices')
+const {initP2PServer, connectToPears} = require('./services/graphServices')
+const {initChain} = require('./services/chainServices')
 
 // Get environment defined variables
 const http_port = process.env.HTTP_PORT || 3000;
@@ -25,9 +25,15 @@ mongoose.connect(url + '/' + dbName)
 
 // Above: Import libraries and set default values
 
-// Whether build blockchain from genesis block, or request the current state of the chane from peers.
-initChain(initialPeers.length, initialPeers).then(() => {
-    console.log('Chain initiaalized with sucess')
+//Connect to known peers if there are any
+
+// Whether build blockchain from genesis block, or request the current chain from peers.
+initChain(initialPeers.length === 0, initialPeers).then(() => {
+    connectToPears(initialPeers, true)
+    console.log('Chain initialized with success!')
+}).catch(err => {
+    console.log('Failed to initialized chain... ' + err)
+    process.exit(1)
 })
 
 //Allow connections from new peers
@@ -55,6 +61,6 @@ app.use(function(err, req, res, next) {
 });
 
 // Launch API server
-app.listen(http_port, () => console.log('Conquering the world on port: ' + http_port));
+app.listen(http_port, () => console.log('Waiting for commands on port: ' + http_port));
 
 module.exports = app;
