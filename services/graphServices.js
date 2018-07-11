@@ -17,7 +17,8 @@ const initP2PServer = function (port) {
 //Initial connection
 const connectToPears = function (peers, initialConnection) {
     peers.forEach((peer) => {
-        var ws = new WebSocket(peer);
+        let  ws = new WebSocket(peer);
+        nodes.push(ws)
         ws.on('open', () => handlePear(ws));
         ws.on('error', () => {
             console.log('connection failed')
@@ -30,7 +31,6 @@ const connectToPears = function (peers, initialConnection) {
 
 //Whenever a new peer connects, define the protocol
 const handlePear = async function (ws) {
-    nodes.push(ws)
     //Define protocol
     // listKnownPeers()
     await defineMessageHandlers(ws, nodes.length -1);
