@@ -28,7 +28,7 @@ mongoose.connect(url + '/' + dbName)
 //Connect to known peers if there are any
 
 // Whether build blockchain from genesis block, or request the current chain from peers.
-initChain(initialPeers.length === 0, initialPeers).then(() => {
+initChain(initialPeers).then(() => {
     connectToPears(initialPeers, true)
     console.log('Chain initialized with success!')
 }).catch(err => {

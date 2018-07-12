@@ -1,35 +1,42 @@
 const mongoose = require('mongoose');
+const messageTypes = require('../config/messageTypes')
 const {addBlockToChain} = require('./chainServices')
 const {createBlock, verifyBlock} = require('./blockServices')
 
 
 //Receive new remote block and add it to the chain
-const receiveRemoteBlock = function (remoteBlock, peerIndex) {
-    if(!verifyBlock(remoteBlock)){
-        queryChain()
-        return
-    }
-    const newBlock = createBlock(remoteBlock.payload, remoteBlock.lastHash, remoteBlock.hash)
-    addBlockToChain({block: newBlock})
+const receiveRemoteBlock = function (remoteBlock) {
+    addBlockToChain({id: remoteBlock._id, hash: remoteBlock.hash, previousHash: remoteBlock.previousHash, payload: remoteBlock.payload})
 }
 
 //Send entire chain
-const sendChain = function () {
+const sendChain = function (nodes, peerIndex) {
+    console.log("sending")
     const blocks = mongoose.model('block')
     blocks.find(function(err, res) {
         if(err){
             console.log("Err finding block " + err)
         }
         const chain = res.map((n) => { return n._doc })
-        broadcast(messageTypes.sendChain, chain)
-    });
+        let payload = []
+        if(!Array.isArray(chain)){
+            payload.push(chain)
+        }else{
+            payload = chain
+        }
+        nodes[peerIndex].send( JSON.stringify({
+            type: messageTypes.sendChain,
+            payload
+            })
+        )
+    })
 }
 
 //Receive chain and act accordingly
 const receiveChain = function (remoteBlocks) {
     //fixme - this should receive as a parameter the number of elements in the chain with countBlock() and searching a constant number of elements for eventual cheching (maybe rework?)
     //FIX THIS FUNCTION
-    const searchDepth = 10
+    /*const searchDepth = 10
     const localBlocks = mongoose.model('block')
     if(localBlocks == undefined){
         //fill empty library
@@ -78,7 +85,7 @@ const receiveChain = function (remoteBlocks) {
                 }
             }
         }
-    })
+    }) */
 }
 
 

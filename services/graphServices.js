@@ -18,24 +18,24 @@ const initP2PServer = function (port) {
 const connectToPears = function (peers, initialConnection) {
     peers.forEach((peer) => {
         let  ws = new WebSocket(peer);
-        nodes.push(ws)
-        ws.on('open', () => handlePear(ws));
+        ws.on('open', () => handlePear(ws, initialConnection));
         ws.on('error', () => {
             console.log('connection failed')
         });
     });
-    if(initialConnection){
-        queryChain()
-    }
 }
 
 //Whenever a new peer connects, define the protocol
-const handlePear = async function (ws) {
+const handlePear = function (ws, initialConnection) {
     //Define protocol
     // listKnownPeers()
-    await defineMessageHandlers(ws, nodes.length -1);
-    await defineErrorHandlers(ws);
+    nodes.push(ws)
+    defineMessageHandlers(ws, nodes.length -1);
+    defineErrorHandlers(ws);
     console.log('-Connected to new peer')
+    if(initialConnection){
+        queryChain()
+    }
 }
 
 //Protocol implementation
@@ -45,20 +45,20 @@ const defineMessageHandlers = function(ws, peerIndex) {
         console.log('Received message ' + JSON.stringify(message));
         switch (message.type) {
             case messageTypes.sendBlock:
-                console.log(message.payload)
-                receiveRemoteBlock(message.payload, peerIndex)
+                receiveRemoteBlock(message.payload)
                 break;
             case messageTypes.requestChain:
-                sendChain()
+                sendChain(nodes, peerIndex)
                 break;
             case messageTypes.sendChain:
-                receiveChain(message.payload)
+                // receiveChain(message.payload) //fixme - use this when it's ready
+                receiveRemoteBlock(message.payload[0])
                 break;
             case messageTypes.requestPeers:
                 listKnownPeers(nodes, peerIndex)
                 break
             case messageTypes.sendPeers:
-                //handle receiving peers
+                //handle receiving peers, remember to JSON.stringify
                 break
         }
     });

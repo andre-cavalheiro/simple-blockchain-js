@@ -6,7 +6,7 @@ const {createBlock, verifyBlock} = require('./blockServices')
 
 
 //Create block model and initiate chain by either creating first block or querying other nodes
-const initChain = async function (firstNode, initialPeers) {
+const initChain = async function (initialPeers) {
     //Connect to db
     mongoose.connect(url + '/' + dbName);
 
@@ -28,41 +28,41 @@ const initChain = async function (firstNode, initialPeers) {
             next(verify)
         else
             next()
-
     })
 
     mongoose.model('block', blockSchema);
-    if(firstNode){
-        console.log('Emptying db...')
-        await emptyChain()
+
+    console.log('Emptying db...')
+    await emptyChain()
+
+    if(initialPeers.length === 0){
         console.log('Creating genesis block')
-        // emptyChain()
-        const firstBlock_ = createBlock(firstBlock.payload,firstBlock.previousHash)
-        firstBlock_.save(function (err) {
-            if(err){
-                throw new Error('Couldn\'t save genesis block ' + err)
-                //fixme exit
-            }
-        })
+        addBlockToChain({payload: firstBlock.payload})
     }
 }
 
-const addBlockToChain = async function ({block, payload}){
+const addBlockToChain = async function ({ payload, lastHash, hash, id}){
     const localBlocks = mongoose.model('block')
-    await localBlocks.find().sort({_id: -1}).limit(1).find(async function(err, res) {      //findOne?
+    let newBlock
+    await localBlocks.find().sort({_id: -1}).limit(1).find(async function(err, res) {
         if(err){
             throw new Error('Err looking into chain ' + err)
         }
-        const lastBlock = res[0]._doc
-        const newBlock =  (block === undefined) ? createBlock(payload ,lastBlock.hash): block
+        if(!payload){
+            throw new Error('Can\'t add empty block')
+        }
+        //If it's the first block in the chain, set previous hash to null
+        const lastBlock = (res.length !== 0) ? res[0]._doc : { hash: null}
+
+        newBlock = createBlock(payload ,lastBlock.hash, hash, id)
 
         await newBlock.save(function (err) {
             if(err){
                 throw new Error('Error saving block ' + err)
             }
         })
-        return newBlock
     });
+    return newBlock
 }
 
 
