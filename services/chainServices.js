@@ -7,8 +7,6 @@ const {createBlock, verifyBlock} = require('./blockServices')
 
 //Create block model and initiate chain by either creating first block or querying other nodes
 const initChain = async function (initialPeers) {
-    //Connect to db
-    mongoose.connect(url + '/' + dbName);
 
     const Schema = mongoose.Schema,
         ObjectId = Schema.ObjectId

@@ -13,6 +13,7 @@ const {initChain} = require('./services/chainServices')
 const http_port = process.env.HTTP_PORT || 3000;
 const p2p_port = process.env.P2P_PORT || 6000;
 const initialPeers = process.env.PEERS ? process.env.PEERS.split(',') : [];
+const dbUrl = process.env.DB ? process.env.DB : url;
 
 const app = express();
 
@@ -21,14 +22,16 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(bodyParser.json());
-mongoose.connect(url + '/' + dbName)
+console.log(dbUrl)
 
 // Above: Import libraries and set default values
 
-//Connect to known peers if there are any
+//Connect to db
+mongoose.connect(dbUrl + '/' + dbName)
 
 // Whether build blockchain from genesis block, or request the current chain from peers.
 initChain(initialPeers).then(() => {
+    //Connect to known peers if there are any
     connectToPears(initialPeers, true)
     console.log('Chain initialized with success!')
 }).catch(err => {
