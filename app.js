@@ -22,12 +22,13 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(bodyParser.json());
-console.log(dbUrl)
 
 // Above: Import libraries and set default values
 
 //Connect to db
-mongoose.connect(dbUrl + '/' + dbName)
+mongoose.connect(dbUrl + '/' + dbName).then(() => {
+    console.log('Connected to DB in ' + dbUrl)
+})
 
 // Whether build blockchain from genesis block, or request the current chain from peers.
 initChain(initialPeers).then(() => {

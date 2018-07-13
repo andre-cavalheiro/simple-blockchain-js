@@ -17,7 +17,7 @@ mkdir /tmp/test
 mongod --dbpath=/tmp/test
 ```
 
-Then start some nodes:
+Then start some peers:
 
 ```bash
 npm start

@@ -2,7 +2,7 @@ const WebSocket = require("ws")
 const messageTypes = require('../config/messageTypes')
 const {receiveRemoteBlock, sendChain, receiveChain, listKnownPeers} = require ('./communicationServices')
 
-let nodes = []
+let peers = []
 
 //wait for connections
 const initP2PServer = function (port) {
@@ -29,8 +29,8 @@ const connectToPears = function (peers, initialConnection) {
 const handlePear = function (ws, initialConnection) {
     //Define protocol
     // listKnownPeers()
-    nodes.push(ws)
-    defineMessageHandlers(ws, nodes.length -1);
+    peers.push(ws)
+    defineMessageHandlers(ws, peers.length -1);
     defineErrorHandlers(ws);
     console.log('-Connected to new peer')
     if(initialConnection){
@@ -48,14 +48,21 @@ const defineMessageHandlers = function(ws, peerIndex) {
                 receiveRemoteBlock(message.payload)
                 break;
             case messageTypes.requestChain:
-                sendChain(nodes, peerIndex)
+                sendChain(peers, peerIndex)
                 break;
             case messageTypes.sendChain:
-                // receiveChain(message.payload) //fixme - use this when it's ready
-                receiveRemoteBlock(message.payload[0])
+                try{
+                    receiveChain(message.payload.chain, message.payload.size) //fixme - use this when it's ready
+                } catch(err) {
+                    console.log(err)
+                    if(err == 'peer-behind'){
+                        // peers[peerIndex].send(messageTypes.sendChain, ?? )
+                    }
+                }
+                // receiveRemoteBlock(message.payload.chain[0])
                 break;
             case messageTypes.requestPeers:
-                listKnownPeers(nodes, peerIndex)
+                listKnownPeers(peers, peerIndex)
                 break
             case messageTypes.sendPeers:
                 //handle receiving peers, remember to JSON.stringify
@@ -76,7 +83,6 @@ const defineErrorHandlers = function(ws){
 }
 
 
-
 //Request the chain from all pears
 const queryChain = function () {
     broadcast(messageTypes.requestChain,null);
@@ -85,7 +91,7 @@ const queryChain = function () {
 
 //Send payload to known pears
 const broadcast = function (type, payload) {
-    nodes.forEach(function (peer) {
+    peers.forEach(function (peer) {
         peer.send(JSON.stringify({type, payload}))
     })
 }

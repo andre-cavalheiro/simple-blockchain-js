@@ -13,7 +13,7 @@ router.post('/', async function(req, res, next) {
     }catch(err){
         console.error(err)
         res.send("Failed to add block - " + err)
-        // Defenir codigo consoante o erro
+        //fixme - Defenir codigo consoante o erro
     }
 });
 

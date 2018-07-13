@@ -5,7 +5,7 @@ const {connectToPears,queryChain} = require('./graphServices')
 const {createBlock, verifyBlock} = require('./blockServices')
 
 
-//Create block model and initiate chain by either creating first block or querying other nodes
+//Create block model and initiate chain by either creating first block or querying other peers
 const initChain = async function (initialPeers) {
 
     const Schema = mongoose.Schema,
