@@ -5,14 +5,15 @@ const {countBlocks} = require('./blockServices')
 
 
 //Receive new remote block and add it to the chain
-const receiveRemoteBlock = function (remoteBlock) {
-    addBlockToChain({id: remoteBlock._id, hash: remoteBlock.hash, previousHash: remoteBlock.previousHash, payload: remoteBlock.payload})
+const receiveRemoteBlock = async function (remoteBlock) {
+    const newBlock = await addBlockToChain({id: remoteBlock._id, hash: remoteBlock.hash, previousHash: remoteBlock.previousHash, payload: remoteBlock.payload})
+    return newBlock
 }
 
 //Send entire chain
 const sendChain = function (peers, peerIndex) {
     const blocks = mongoose.model('block')
-    blocks.find(function(err, res) {
+    blocks.find({}, function(err, res) {
         if(err){
             console.log("Err finding block " + err)
         }

@@ -39,13 +39,15 @@ const handlePear = function (ws, initialConnection) {
 }
 
 //Protocol implementation
-const defineMessageHandlers = function(ws, peerIndex) {
+const defineMessageHandlers = async function(ws, peerIndex) {
     ws.on('message', (data) => {
         const message = JSON.parse(data);
         console.log('Received message ' + JSON.stringify(message));
         switch (message.type) {
             case messageTypes.sendBlock:
-                receiveRemoteBlock(message.payload)
+                    receiveRemoteBlock(message.payload).then((newBlock) => {
+                    broadcast(messageTypes.sendBlock, newBlock, peerIndex)
+                })
                 break;
             case messageTypes.requestChain:
                 sendChain(peers, peerIndex)
@@ -90,9 +92,11 @@ const queryChain = function () {
 
 
 //Send payload to known pears
-const broadcast = function (type, payload) {
-    peers.forEach(function (peer) {
-        peer.send(JSON.stringify({type, payload}))
+const broadcast = function (type, payload, exeption) {
+    peers.forEach(function (peer, index) {
+        if(!(peer === exeption)){
+            peer.send(JSON.stringify({type, payload}))
+        }
     })
 }
 
