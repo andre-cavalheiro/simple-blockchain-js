@@ -1,40 +1,45 @@
 const WebSocket = require("ws")
 const messageTypes = require('../config/messageTypes')
-const {receiveRemoteBlock, sendChain, receiveChain, listKnownPeers} = require ('./communicationServices')
+const {receiveRemoteBlock, sendChain, receiveChain, sendPeers} = require ('./communicationServices')
 
 let peers = []
+let peerAddresses = []
 
 //wait for connections
 const initP2PServer = function (port) {
     const server = new WebSocket.Server({port});
     server.on('connection', (ws) => {
         handlePear(ws)
-    });
-    console.log('Waiting for new peers connections on: ' + port);
+    })
+    console.log('Waiting for new peers connections on: ' + port)
     return server
 }
 
-//Initial connection
+//Connection
 const connectToPears = function (peers, initialConnection) {
     peers.forEach((peer) => {
         let  ws = new WebSocket(peer);
-        ws.on('open', () => handlePear(ws, initialConnection));
+        ws.on('open', () => {
+            peerAddresses.push(peer)
+            handlePear(ws, initialConnection)
+        })
         ws.on('error', () => {
-            console.log('connection failed')
-        });
-    });
+            console.log('connection to peer failed')
+        })
+    })
 }
 
 //Whenever a new peer connects, define the protocol
-const handlePear = function (ws, initialConnection) {
+const handlePear = function (ws, myInitialConnection) {
     //Define protocol
-    // listKnownPeers()
     peers.push(ws)
-    defineMessageHandlers(ws, peers.length -1);
+    defineMessageHandlers(ws, peers.length -1)      // depending on the index being the last one is not very secure, should find another way later
     defineErrorHandlers(ws);
     console.log('-Connected to new peer')
-    if(initialConnection){
+    if(myInitialConnection){
         queryChain()
+        queryPeers()
+        sendPeers(peers, peerAddresses, peers.length -1) // depending on the index being the last one is not very secure, should find another way later
     }
 }
 
@@ -64,10 +69,17 @@ const defineMessageHandlers = async function(ws, peerIndex) {
                 // receiveRemoteBlock(message.payload.chain[0])
                 break;
             case messageTypes.requestPeers:
-                listKnownPeers(peers, peerIndex)
+                sendPeers(peers, peerAddresses, peerIndex)
                 break
             case messageTypes.sendPeers:
-                //handle receiving peers, remember to JSON.stringify
+                let remotePeers = message.payload
+                let newPeers = []
+                remotePeers.forEach(peer => {
+                    if(!peerAddresses.includes(peer)){
+                        newPeers.push(peer)
+                    }
+                })
+                connectToPears(newPeers)
                 break
         }
     });
@@ -77,11 +89,12 @@ const defineMessageHandlers = async function(ws, peerIndex) {
 //Connection error handling
 const defineErrorHandlers = function(ws){
     const closeConnection = (ws) => {
-        console.log('connection failed to peer: ' + ws.url);
-        sockets.splice(sockets.indexOf(ws), 1);
+        console.log('An error occurred, droping peer');
+        peers.splice(peers.indexOf(ws), 1)
+        peerAddresses.splice(peers.indexOf(ws), 1)
     };
-    ws.on('close', () => closeConnection(ws));
-    ws.on('error', () => closeConnection(ws));
+    ws.on('close', () => closeConnection(ws))
+    ws.on('error', () => closeConnection(ws))
 }
 
 
@@ -90,20 +103,33 @@ const queryChain = function () {
     broadcast(messageTypes.requestChain,null);
 }
 
+//Request the chain from all pears
+const queryPeers = function () {
+    broadcast(messageTypes.requestPeers,null);
+}
+
 
 //Send payload to known pears
 const broadcast = function (type, payload, exeption) {
-    peers.forEach(function (peer, index) {
+    peers.forEach(function (peer) {
         if(!(peer === exeption)){
             peer.send(JSON.stringify({type, payload}))
         }
     })
 }
 
+const listPeers = function () {
+    return {
+        peers,
+        peerAddresses
+    }
+}
 
 module.exports = {
     initP2PServer,
     connectToPears,
     queryChain,
-    broadcast
+    queryPeers,
+    broadcast,
+    listPeers
 }

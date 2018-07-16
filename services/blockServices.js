@@ -32,6 +32,7 @@ const verifyBlock = async function (newBlock) {
             if(!(res.length == 0)){
                 const lastBlock = res[0]._doc
                 if(lastBlock.hash !== newBlock.previousHash){
+                    console.log('hash (oldBlock): ' + lastBlock.hash + 'pre-hash (newBlock): ' + newBlock.previousHash)
                     throw new Error('Invalid Block, hashes don\'t match')
                 }
             }

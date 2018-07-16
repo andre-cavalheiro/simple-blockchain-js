@@ -35,6 +35,17 @@ const sendChain = function (peers, peerIndex) {
     })
 }
 
+//List Known Peers to single peers who have requested them
+const sendPeers = function (peers, peerAddresses, peerIndex) {
+    // fixme - i need better testing (but appear to be working :) )
+    const payload = (peerAddresses.length !== 0) ? peerAddresses: []
+    payload.slice(peerIndex, 1)
+    peers[peerIndex].send(JSON.stringify({
+        type: messageTypes.sendPeers,
+        payload
+    }))
+}
+
 //Receive chain and act accordingly
 const receiveChain = function (remoteBlocks, remoteChainSize) {
     // fixme - this should receive as a parameter the number of elements in the chain with countBlock() and searching a constant number of elements for eventual cheching (maybe rework?)
@@ -95,17 +106,9 @@ const receiveChain = function (remoteBlocks, remoteChainSize) {
 }
 
 
-//List Known Peers to single peers who have requested them
-const listKnownPeers = function (peers, peerIndex) {
-    peers[peerIndex].send({
-        type: messageTypes.sendPeers,
-        payload: peers
-    })
-}
-
 module.exports = {
     receiveRemoteBlock,
     sendChain,
-    receiveChain,
-    listKnownPeers
+    sendPeers,
+    receiveChain
 }

@@ -2,11 +2,11 @@ const express = require('express');
 const bodyParser = require("body-parser");
 const mongoose = require('mongoose');
 const indexRouter = require('./routes/index');
-const getPeers = require('./routes/getPeers');
+const listPeers = require('./routes/listPeers');
 const addPeer = require('./routes/addPeer');
 const addBlock = require('./routes/addBlock');
 const {url, dbName} = require('./config/db')
-const {initP2PServer, connectToPears} = require('./services/graphServices')
+const {initP2PServer, connectToPears, queryPeers} = require('./services/graphServices')
 const {initChain} = require('./services/chainServices')
 
 // Get environment defined variables
@@ -45,7 +45,7 @@ initP2PServer(p2p_port);
 
 // Ready HTTP API
 app.use('/', indexRouter);
-app.use('/peers', getPeers);
+app.use('/peers', listPeers);
 app.use('/peers', addPeer);
 app.use('/add-block',addBlock );
 
