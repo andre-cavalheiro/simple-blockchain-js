@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
-const {url, dbName} = require('../config/db')
 const firstBlock = require('../config/firstBlock')
-const {connectToPears,queryChain} = require('./graphServices')
-const {createBlock, verifyBlock} = require('./blockServices')
+const {createBlock} = require('./blockServices')
 
 
 //Create block model and initiate chain by either creating first block or querying other peers
@@ -20,16 +18,9 @@ const initChain = async function (initialPeers) {
         versionKey: false
     })
 
-    blockSchema.pre('save', async function (next) {
-        const verify = await verifyBlock(this)
-        if(verify !== true)
-            next(verify)
-        else
-            next()
-    })
-
     mongoose.model('block', blockSchema);
 
+    // Emptying previous blocks that were saved in BD before deployment, probably this shouldn't be in production
     console.log('Emptying db...')
     await emptyChain()
 
@@ -41,26 +32,53 @@ const initChain = async function (initialPeers) {
 
 const addBlockToChain = async function ({ payload, lastHash, hash, id}){
     const localBlocks = mongoose.model('block')
-    let newBlock
-    await localBlocks.find().sort({_id: -1}).limit(1).find(async function(err, res) {
-        if(err){
-            throw new Error('Err looking into chain ' + err)
+    let newBlock, previousHash
+    if(!payload){
+        throw new Error('Can\'t add empty block')
+    }
+    try{
+        // Define previous Hash to use
+        if(!lastHash){
+            await localBlocks.find().sort({_id: -1}).limit(1).find(async function(err, res) {
+                // fixme - Sort por id não é o que se pretende mas por enquanto funciona
+                if (err) {
+                    throw new Error('Err looking into chain ' + err)
+                }
+                //If it's the first block in the chain, set previous hash to null
+                const lastBlock = (res.length !== 0) ? res[0]._doc : {hash: null}
+                previousHash = lastBlock.hash
+            })
+        } else {
+            // Verify given previous hash
+            await localBlocks.find({hash: lastHash}, async function (err, res) {
+                if (err) {
+                    throw new Error("Err looking into chain " + err)
+                }
+                if (res.length === 0 && lastHash !== null) {
+                    throw new Error('Missing previous block')
+                }
+            })
+            await localBlocks.find({previousHash: lastHash}, function (err, res) {
+                if (!(res.length === 0) && lastHash !== null) {
+                    throw new Error('Position is occupied')
+                }
+            })
+            previousHash = lastHash
         }
-        if(!payload){
-            throw new Error('Can\'t add empty block')
-        }
-        //If it's the first block in the chain, set previous hash to null
-        const lastBlock = (res.length !== 0) ? res[0]._doc : { hash: null}
 
-        newBlock = createBlock(payload ,lastBlock.hash, hash, id)
+        newBlock = createBlock(payload, previousHash, hash, id)
 
         await newBlock.save(function (err) {
-            if(err){
-                throw new Error('Error saving block ' + err)
+            if (err) {
+                throw new Error('Error saving block' + err)
             }
         })
-    });
-    return newBlock
+        console.log('Block added: ' + newBlock.hash)
+        return newBlock
+    } catch(err) {
+        console.error(err)
+        throw err
+    }
 }
 
 

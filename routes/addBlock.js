@@ -1,20 +1,18 @@
 const express = require('express');
-const {addBlockToChain, createBlock} = require('../services/chainServices')
-const {broadcast} = require('../services/graphServices')
-const messageTypes = require('../config/messageTypes')
+const {addBlockToChain} = require('../services/chainServices')
+const {spreadNewBlock} = require('../services/communicationServices')
 
 const router = express.Router();
 
 router.post('/', async function(req, res, next) {
-    try{
-        const newBlock = await addBlockToChain({payload: req.body.payload})
-        broadcast(messageTypes.sendBlock, newBlock)
-        res.status(201).send("Block was added with success")
-    }catch(err){
-        console.error(err)
-        res.send("Failed to add block - " + err)
-        //fixme - Defenir codigo consoante o erro
-    }
-});
+        addBlockToChain({payload: req.body.payload}).then( (newBlock) => {
+            spreadNewBlock(newBlock)
+            res.status(201).send("Block was added with success")
+        }).catch((err) => {
+            //fixme - Defenir codigo consoante o erro
+            console.error(err)
+            res.send("Failed to add block - " + err)
+        })
+})
 
 module.exports = router;

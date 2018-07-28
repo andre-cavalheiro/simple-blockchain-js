@@ -6,7 +6,7 @@ const listPeers = require('./routes/listPeers');
 const addPeer = require('./routes/addPeer');
 const addBlock = require('./routes/addBlock');
 const {url, dbName} = require('./config/db')
-const {initP2PServer, connectToPears, queryPeers} = require('./services/graphServices')
+const {initP2PServer, connectToPears} = require('./services/graphServices')
 const {initChain} = require('./services/chainServices')
 
 // Get environment defined variables
@@ -32,16 +32,17 @@ mongoose.connect(dbUrl + '/' + dbName).then(() => {
 
 // Whether build blockchain from genesis block, or request the current chain from peers.
 initChain(initialPeers).then(() => {
-    //Connect to known peers if there are any
+    console.log('Chain initialized with success')
+    //Connect to known peers if there are any and request the chain from them
     connectToPears(initialPeers, true)
-    console.log('Chain initialized with success!')
+    console.log('Connected to initial Peers')
+    //Allow connections from new peers
+    initP2PServer(p2p_port);
+    console.log()
 }).catch(err => {
     console.log('Failed to initialized chain... ' + err)
     process.exit(1)
 })
-
-//Allow connections from new peers
-initP2PServer(p2p_port);
 
 // Ready HTTP API
 app.use('/', indexRouter);
