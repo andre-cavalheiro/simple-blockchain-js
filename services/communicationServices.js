@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const messageTypes = require('../config/messageTypes')
-const {addBlockToChain} = require('./chainServices')
+const {addBlockToChain, getLastHashInChain} = require('./chainServices')
 const {countBlocks} = require('./blockServices')
 const {getPeers} = require('./peerServices')
 
@@ -9,10 +9,10 @@ const receiveRemoteBlock = async function (remoteBlock, exception) {
     await addBlockToChain({id: remoteBlock._id, hash: remoteBlock.hash, lastHash: remoteBlock.previousHash, payload: remoteBlock.payload}).then((newBlock) => {
         spreadNewBlock(newBlock, exception)
     } ).catch( (err) => {
-        if(err === 'Position is occupied'){
+        if(err.message == 'Position is occupied'){
+            console.log('> Ignored Block')
             return
         }
-        console.error(err)
         throw err
     })
 
@@ -55,8 +55,9 @@ const sendPeers = function (peers, peerAddresses, peerIndex) {
 }
 
 //Receive chain and act accordingly
-const receiveChain = function (remoteBlocks, remoteChainSize) {
-   //fixme
+const receiveRemoteChain = function (chain) {
+    const lastRemoteHash = getLastHashInChain()
+    chain.find
 }
 
 //Request the chain from all pears
@@ -88,7 +89,7 @@ module.exports = {
     receiveRemoteBlock,
     sendChain,
     sendPeers,
-    receiveChain,
+    receiveRemoteChain,
     queryChain,
     queryPeers,
     spreadNewBlock,

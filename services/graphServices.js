@@ -1,9 +1,9 @@
 const WebSocket = require("ws")
 const mongoose = require('mongoose');
 const messageTypes = require('../config/messageTypes')
-const {receiveRemoteBlock, sendChain, receiveChain, sendPeers, queryChain, queryPeers} = require ('./communicationServices')
+const {receiveRemoteBlock, sendChain, receiveRemoteChain, sendPeers, queryChain, queryPeers} = require ('./communicationServices')
 const {addPeer, dropPeer, getPeers} = require('./peerServices')
-
+const {addBlockToChain} = require('./chainServices')
 
 // You were here! põe isto na DB
 // let peers = []
@@ -52,7 +52,7 @@ const handlePear = function (ws, address) {
 const defineMessageHandlers = async function(ws, peerIndex) {
     // fixme peerindex might change if peer is dropped, use unique identifier
     const peers = getPeers()
-    ws.on('message', (data) => {
+    ws.on('message', async (data) => {
         const message = JSON.parse(data)
         console.log('Received message ' + data)
         switch (message.type) {
@@ -65,14 +65,18 @@ const defineMessageHandlers = async function(ws, peerIndex) {
                 sendChain(peers.connection, peerIndex)
                 break;
             case messageTypes.sendChain:
-                try{
-                    receiveChain(message.payload.chain, message.payload.size)  // fixme - use this when it's ready
-                } catch(err) {
-                    // fixme
-                    console.log(err)
+                // receiveRemoteChain(message.payload.chain)
+                for(let block of message.payload.chain){
+                    // !!! You were here, it's not awaiting
+                    await addBlockToChain({id: block._id, hash: block.hash, lastHash: block.previousHash, payload: block.payload}).catch((err) => {
+                        if(err.message == 'Position is occupied'){
+                            // ignore
+                        }else{
+                            console.log('boop')
+                        }
+                    })
                 }
-                // receiveRemoteBlock(message.payload.chain[0])
-                break;
+                break
             case messageTypes.requestPeers:
                 sendPeers(peers.connection, peers.addresses, peerIndex)
                 break

@@ -30,53 +30,56 @@ const initChain = async function (initialPeers) {
     }
 }
 
-const addBlockToChain = async function ({ payload, lastHash, hash, id}){
+const addBlockToChain = async function ({ payload, lastHash, hash, id}) {
     const localBlocks = mongoose.model('block')
     let newBlock, previousHash
-    if(!payload){
+    if (!payload) {
         throw new Error('Can\'t add empty block')
     }
-    try{
+    try {
         // Define previous Hash to use
-        if(!lastHash){
-            await localBlocks.find().sort({_id: -1}).limit(1).find(async function(err, res) {
+        if (lastHash === undefined) {
+            await localBlocks.find().sort({_id: -1}).limit(1).find().then( res => {
                 // fixme - Sort por id não é o que se pretende mas por enquanto funciona
-                if (err) {
-                    throw new Error('Err looking into chain ' + err)
-                }
                 //If it's the first block in the chain, set previous hash to null
                 const lastBlock = (res.length !== 0) ? res[0]._doc : {hash: null}
                 previousHash = lastBlock.hash
-            })
-        } else {
-            // Verify given previous hash
-            await localBlocks.find({hash: lastHash}, async function (err, res) {
-                if (err) {
-                    throw new Error("Err looking into chain " + err)
+            }).catch(err => {throw new Error(err)})
+        } else if (lastHash === null) {
+            // If it's the genesis block check if we have it
+           await localBlocks.find({_id: id}).then( res => {
+                if (res.length === 0) {
+                    previousHash = lastHash
                 }
-                if (res.length === 0 && lastHash !== null) {
-                    throw new Error('Missing previous block')
-                }
-            })
-            await localBlocks.find({previousHash: lastHash}, function (err, res) {
-                if (!(res.length === 0) && lastHash !== null) {
+                else {
                     throw new Error('Position is occupied')
                 }
-            })
+            }).catch(err => {throw err})
+        } else {
+            // Verify given previous hash
+            await localBlocks.find({hash: lastHash}).then( res => {
+                if (res.length === 0) {
+                    throw new Error('Missing previous block')
+                }
+            }).then( () => {
+                return localBlocks.find({previousHash: lastHash})
+            }).then( res => {
+                if (!(res.length === 0)) {
+                    throw new Error('Position is occupied')
+                }
+            }).catch(err => {throw err})
+
             previousHash = lastHash
         }
 
         newBlock = createBlock(payload, previousHash, hash, id)
 
-        await newBlock.save(function (err) {
-            if (err) {
-                throw new Error('Error saving block' + err)
-            }
+        await newBlock.save().catch((err) => {
+            console.log('Error saving Block ' + err)
         })
-        console.log('Block added: ' + newBlock.hash)
+        console.log('Block added: ' + newBlock.hash + '\n')
         return newBlock
-    } catch(err) {
-        console.error(err)
+    } catch(err){
         throw err
     }
 }
@@ -89,15 +92,22 @@ const emptyChain = async function () {
 }
 
 
-const verifyChain = function () {
-    return true
+const getLastHashInChain = async function () {
+    let lastHash
+    await localBlocks.find().sort({_id: -1}).limit(1).find(async function (err, res) {
+        // fixme - Sort por id não é o que se pretende mas por enquanto funciona
+        if (err) {
+            throw new Error('Err looking into chain ' + err)
+        }
+        //If it's the first block in the chain, set previous hash to null
+        lastHash = (res.length !== 0) ? res[0]._doc.hash : null
+    })
+    return lastHash
 }
-
 
 
 module.exports = {
     initChain,
     addBlockToChain,
-    emptyChain,
-    verifyChain
+    getLastHashInChain
 }
